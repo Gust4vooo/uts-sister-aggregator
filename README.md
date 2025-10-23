@@ -1,6 +1,7 @@
-# uts-sister-aggregator
-
 # UTS Sistem Terdistribusi: Pub-Sub Log Aggregator
+
+Tema: Pub-Sub Log Aggregator  
+Penulis: Gusti Muhammad Risandha
 
 Proyek ini adalah implementasi layanan *Pub-Sub log aggregator* sebagai bagian dari Ujian Tengah Semester mata kuliah Sistem Terdistribusi. Layanan ini dibangun untuk menerima *event* (log), memprosesnya secara asinkron, dan memastikan setiap *event* unik hanya diproses sekali (*idempotency*) melalui mekanisme deduplikasi yang persisten.
 
