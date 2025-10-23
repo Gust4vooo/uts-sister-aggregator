@@ -1,11 +1,10 @@
-# src/main.py
-
 import asyncio
 from datetime import datetime, timezone
 from typing import List, Union, Dict
 import time
 import uuid
 import logging
+from contextlib import asynccontextmanager
 
 from src import database
 from fastapi import FastAPI, Body
@@ -22,8 +21,26 @@ class Event(BaseModel):
 # Konfigurasi logging dasar
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# State sementara
-app = FastAPI(title="Event Aggregator Service")
+# Lifespan Manager untuk Startup dan Shutdown
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Kode ini berjalan saat STARTUP
+    logging.info("Initializing database...")
+    database.init_db()
+    worker_task = asyncio.create_task(event_processor())
+    
+    yield # Aplikasi berjalan setelah ini
+    
+    # Kode ini berjalan saat SHUTDOWN
+    logging.info("Shutting down... cancelling worker task.")
+    worker_task.cancel()
+    try:
+        await worker_task
+    except asyncio.CancelledError:
+        logging.info("Worker task cancelled successfully.")
+
+# State sementara dan Inisialisasi Aplikasi
+app = FastAPI(title="Event Aggregator Service", lifespan=lifespan)
 internal_queue = asyncio.Queue()
 processed_events: List[Event] = []
 stats = {
@@ -63,31 +80,22 @@ async def get_stats():
 
 # Worker untuk memproses event
 async def event_processor():
-
-    logging.info("Event processor started...")
+    logging.info("Event processor started")
     while True:
-        event = await internal_queue.get()
-        
-        is_dup = database.is_duplicate(event.topic, event.event_id)
-        
-        if not is_dup:
-            # Event ini unik
-            logging.info(f"Processing new event: (topic={event.topic}, id={event.event_id})")
-            processed_events.append(event)
-            stats["unique_processed"] += 1
-        else:
-            # Event ini duplikat
-            logging.warning(f"Duplicate event dropped: (topic={event.topic}, id={event.event_id})")
-            stats["duplicate_dropped"] += 1
+        try:
+            event = await internal_queue.get()
             
-        internal_queue.task_done()
-
-# Jalankan worker saat startup aplikasi
-@app.on_event("startup")
-async def startup_event():
-    # 1. Inisialisasi database
-    logging.info("Initializing database...")
-    database.init_db()
-    
-    # 2. Jalankan worker di background
-    asyncio.create_task(event_processor())
+            is_dup = database.is_duplicate(event.topic, event.event_id)
+            
+            if not is_dup:
+                logging.info(f"Processing new event: (topic={event.topic}, id={event.event_id})")
+                processed_events.append(event)
+                stats["unique_processed"] += 1
+            else:
+                logging.warning(f"Duplicate event dropped: (topic={event.topic}, id={event.event_id})")
+                stats["duplicate_dropped"] += 1
+                
+            internal_queue.task_done()
+        except asyncio.CancelledError:
+            logging.info("Event processor stopping.")
+            break
