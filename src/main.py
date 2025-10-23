@@ -24,15 +24,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Lifespan Manager untuk Startup dan Shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Kode ini berjalan saat STARTUP
     logging.info("Initializing database...")
     database.init_db()
     worker_task = asyncio.create_task(event_processor())
     
-    yield # Aplikasi berjalan setelah ini
-    
-    # Kode ini berjalan saat SHUTDOWN
-    logging.info("Shutting down... cancelling worker task.")
+    yield 
+
+    logging.info("Shutting down, cancelling worker task.")
     worker_task.cancel()
     try:
         await worker_task
