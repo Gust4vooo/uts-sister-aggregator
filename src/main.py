@@ -5,7 +5,9 @@ from datetime import datetime, timezone
 from typing import List, Union, Dict
 import time
 import uuid
+import logging
 
+from src import database
 from fastapi import FastAPI, Body
 from pydantic import BaseModel, Field
 
@@ -16,6 +18,9 @@ class Event(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     source: str
     payload: Dict
+
+# Konfigurasi logging dasar
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # State sementara
 app = FastAPI(title="Event Aggregator Service")
@@ -56,21 +61,33 @@ async def get_stats():
         "uptime_seconds": uptime
     }
 
-# Dummy worker untuk memproses event
+# Worker untuk memproses event
 async def event_processor():
 
-    print("Event processor started...")
+    logging.info("Event processor started...")
     while True:
         event = await internal_queue.get()
         
-        # Logika dedup akan ditambahkan di sini nanti
-        print(f"Processing event: {event.event_id}")
-        processed_events.append(event)
-        stats["unique_processed"] += 1
+        is_dup = database.is_duplicate(event.topic, event.event_id)
         
+        if not is_dup:
+            # Event ini unik
+            logging.info(f"Processing new event: (topic={event.topic}, id={event.event_id})")
+            processed_events.append(event)
+            stats["unique_processed"] += 1
+        else:
+            # Event ini duplikat
+            logging.warning(f"Duplicate event dropped: (topic={event.topic}, id={event.event_id})")
+            stats["duplicate_dropped"] += 1
+            
         internal_queue.task_done()
 
 # Jalankan worker saat startup aplikasi
 @app.on_event("startup")
 async def startup_event():
+    # 1. Inisialisasi database
+    logging.info("Initializing database...")
+    database.init_db()
+    
+    # 2. Jalankan worker di background
     asyncio.create_task(event_processor())
