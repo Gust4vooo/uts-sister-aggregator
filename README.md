@@ -129,7 +129,7 @@ Untuk menjalankan unit test secara lokal, pastikan Anda sudah membuat *virtual e
 
 Video demonstrasi yang menunjukkan proses *build*, *run*, pengujian fungsionalitas, dan simulasi *crash* dapat diakses melalui link berikut:
 
-**[MASUKKAN LINK VIDEO YOUTUBE PUBLIK ANDA DI SINI]**
+**https://youtu.be/ao911qAEM_c**
 
 ---
 
