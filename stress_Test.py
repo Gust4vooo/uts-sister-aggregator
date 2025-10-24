@@ -3,9 +3,10 @@ import json
 import time
 import uuid
 import random
+import os
 
 # Konfigurasi
-API_URL = "http://localhost:8080/publish"
+API_URL = os.getenv("API_URL", "http://localhost:8080/publish")
 TOTAL_EVENTS = 5000
 DUPLICATE_PERCENTAGE = 0.2 
 

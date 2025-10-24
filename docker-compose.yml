@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  aggregator:
+    build: .
+    container_name: aggregator_service
+    ports:
+      - "8080:8000"
+    volumes:
+      - ./src:/app/src
+
+  publisher:
+    build: ./publisher
+    container_name: publisher_service
+    depends_on:
+      - aggregator
