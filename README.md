@@ -1,7 +1,7 @@
 # UTS Sistem Terdistribusi: Pub-Sub Log Aggregator
 
-Tema: Pub-Sub Log Aggregator  
-Penulis: Gusti Muhammad Risandha
+**Tema**: Pub-Sub Log Aggregator  
+**Penulis**: Gusti Muhammad Risandha
 
 Proyek ini adalah implementasi layanan *Pub-Sub log aggregator* sebagai bagian dari Ujian Tengah Semester mata kuliah Sistem Terdistribusi. Layanan ini dibangun untuk menerima *event* (log), memprosesnya secara asinkron, dan memastikan setiap *event* unik hanya diproses sekali (*idempotency*) melalui mekanisme deduplikasi yang persisten.
 
@@ -14,36 +14,50 @@ Seluruh layanan dirancang untuk berjalan di dalam container Docker yang terisola
 -   **Deduplikasi Persisten**: Menggunakan **SQLite** sebagai *dedup store* yang tahan terhadap *restart* atau *crash* pada container, memastikan tidak ada data yang diproses ulang.
 -   **Terkontainerisasi**: Sepenuhnya berjalan di dalam **Docker**, memastikan portabilitas dan kemudahan dalam proses *build* dan eksekusi.
 -   **Teruji (Unit Tested)**: Dilengkapi dengan 7 unit test menggunakan **Pytest** untuk memvalidasi fungsionalitas inti, termasuk logika deduplikasi dan persistensi.
+-   **Bonus Docker Compose**: Menyediakan konfigurasi untuk menjalankan layanan *aggregator* dan *publisher* secara bersamaan dalam jaringan internal.
 
 ---
 
 ## Cara Menjalankan Aplikasi
 
-Pastikan sudah menginstal **Docker Desktop** atau Docker Engine dan layanannya sedang berjalan.
+Pastikan Anda sudah menginstal **Docker Desktop** atau Docker Engine dan layanannya sedang berjalan. Proyek ini dapat dijalankan dengan dua cara:
 
-### 1. Build Docker Image
+### Opsi 1: Menjalankan Service Aggregator Saja (Tugas Wajib)
 
-Buka terminal di direktori utama proyek, lalu jalankan perintah berikut untuk membangun *image* Docker:
+Cara ini hanya akan menjalankan layanan *aggregator* utama. Anda perlu mengirim *event* secara manual menggunakan cURL atau Postman.
 
-```bash
-docker build -t uts-aggregator .
-```
+1.  **Build Docker Image**:
+    ```bash
+    docker build -t uts-aggregator .
+    ```
 
-### 2. Jalankan Container
+2.  **Jalankan Container**:
+    ```bash
+    docker run -d -p 8080:8000 -v ./src:/app/src --name my-aggregator uts-aggregator
+    ```
 
-Setelah proses *build* selesai, jalankan container dari *image* yang telah dibuat dengan perintah:
+Aplikasi dapat diakses melalui `http://localhost:8080`.
 
-```bash
-docker run -d -p 8080:8000 -v ./src:/app/src --name my-aggregator uts-aggregator
-```
+### Opsi 2: Menjalankan dengan Publisher (Bonus Docker Compose)
 
-Penjelasan perintah:
--   `-d`: Menjalankan container di *background* (*detached mode*).
--   `-p 8080:8000`: Memetakan port **8080** di mesin Anda ke port **8000** di dalam container.
--   `-v ./src:/app/src`: **(Penting)** Membuat *volume* yang menyinkronkan folder `src` lokal dengan folder `/app/src` di container. Ini memastikan file database `dedup_store.db` tersimpan di mesin Anda dan tidak hilang saat container dihentikan.
--   `--name my-aggregator`: Memberi nama pada container agar mudah dikelola.
+Cara ini akan menjalankan **kedua** layanan secara bersamaan: `aggregator` (penerima) dan `publisher` (pengirim *event* otomatis). Ini adalah cara terbaik untuk melihat sistem beraksi secara terus-menerus.
 
-Aplikasi sekarang dapat diakses melalui `http://localhost:8080`.
+1.  **Jalankan dengan Docker Compose**:
+    Buka terminal di direktori utama proyek, lalu jalankan satu perintah ini:
+    ```bash
+    docker-compose up --build
+    ```
+    Perintah ini akan membangun *image* yang diperlukan dan memulai kedua *container*. Terminal Anda akan menampilkan log dari kedua layanan secara *real-time*.
+
+2.  **Verifikasi**:
+    Setelah beberapa detik, Anda akan melihat log *publisher* yang mengirim *event* dan log *aggregator* yang memprosesnya. Untuk memverifikasi dari luar, buka terminal baru dan cek *endpoint* statistik:
+    ```bash
+    curl http://localhost:8080/stats
+    ```
+    Anda akan melihat angka `received` dan `unique_processed` terus bertambah secara otomatis.
+
+3.  **Menghentikan Layanan**:
+    Untuk menghentikan semua layanan, kembali ke terminal tempat Anda menjalankan `docker-compose up` dan tekan `Ctrl + C`.
 
 ---
 
@@ -115,7 +129,7 @@ Untuk menjalankan unit test secara lokal, pastikan Anda sudah membuat *virtual e
 
 Video demonstrasi yang menunjukkan proses *build*, *run*, pengujian fungsionalitas, dan simulasi *crash* dapat diakses melalui link berikut:
 
-**[Link menyusul..]**
+**[MASUKKAN LINK VIDEO YOUTUBE PUBLIK ANDA DI SINI]**
 
 ---
 
@@ -125,5 +139,5 @@ Video demonstrasi yang menunjukkan proses *build*, *run*, pengujian fungsionalit
 -   **Framework**: FastAPI
 -   **Server**: Uvicorn
 -   **Database**: SQLite
--   **Kontainerisasi**: Docker
+-   **Kontainerisasi**: Docker, Docker Compose
 -   **Testing**: Pytest
